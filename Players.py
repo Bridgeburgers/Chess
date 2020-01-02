@@ -35,14 +35,14 @@ class Player:
 class ABPruner(Player):
     
     def __init__(self, human=False, color=False, 
-                 heuristic=Heuristics.BasicNumericEvaluation,
-                 maxDepth=10, alphaCeiling=1e8):
+                 heuristic=Heuristics.RawNumericEvaluation,
+                 maxDepth=1, alphaCeiling=1e8):
         super().__init__(human, color)
         self.heuristic = heuristic
         self.alphaCeiling = alphaCeiling
         self.maxDepth = maxDepth
         
-    def TerminalTest(self, board, depth, maxDepth=5):
+    def TerminalTest(self, board, depth, maxDepth):
         
         if depth >= maxDepth or board.GetTerminalCondition():
             return True
@@ -90,7 +90,7 @@ class ABPruner(Player):
     
     def ABSearch(self, board, color='W'):
         v, a = self.MaxValue(board, -self.alphaCeiling, self.alphaCeiling,
-                             1, self.maxDepth, color)
+                             0, self.maxDepth, color)
         return a
     
     def Play(self, board):
