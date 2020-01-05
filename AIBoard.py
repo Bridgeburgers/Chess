@@ -3,8 +3,12 @@ import numpy as np
 #%%
 class AIBoard(Board):
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.strState = str(self)
+    
     def BoardArray(self):
-        a = np.array(list(str(self)))
+        a = np.array(list(self.strState))
         a = a[a!='\n']
         a = a[a!=' ']
         a = np.reshape(a, [8,8])
@@ -28,6 +32,10 @@ class AIBoard(Board):
         else:
             return False
         
+    def PushUci(self, uci):
+        self.push_uci(uci)
+        self.strState = str(self)
+        
     def TerminalConditionScore(self, color='W', scoreCeiling=1e7):
         t = self.GetTerminalCondition()
         if not t or t=='D':
@@ -39,5 +47,6 @@ class AIBoard(Board):
         
     def MoveCopy(self, move):
         returnBoard = self.copy()
-        returnBoard.push_uci(move)
+        returnBoard.PushUci(move)
         return returnBoard
+    

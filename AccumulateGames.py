@@ -1,13 +1,13 @@
 import sys
 import pandas as pd
-sys.path.append('C:/Users/asibilia/Repos/Chess/')
+sys.path.append('D:/Documents/PythonCode/Chess/')
 from PlayGame import PlayGame
-from Players import Player, ABPruner
+from Players import Player, ABPruner, FastPruner
 
 #%%
 
 gameResults = []
 for _ in range(20):
-    l = PlayGame(ABPruner(maxDepth=2), ABPruner(maxDepth=3), 0, visual=None)
+    l = PlayGame(ABPruner(maxDepth=4), ABPruner(maxDepth=4), 0)
     print(l)
     gameResults.append(l[0])

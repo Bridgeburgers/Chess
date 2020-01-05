@@ -42,7 +42,7 @@ def RawNumericEvaluation(board, color='W', scoreCeiling=1e6,
     if board.GetTerminalCondition():
         return board.TerminalConditionScore(color, scoreCeiling)
     
-    score = sum([rawUnitScores[c] for c in str(board)])
+    score = sum([rawUnitScores[c] for c in board.strState])
     if color.lower()=='b':
         score = -score
         
