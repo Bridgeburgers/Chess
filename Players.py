@@ -61,11 +61,43 @@ class HeuristicPlayer(Player):
         """
         actions = [move.uci() for move in list(board.legal_moves)]
         nextBoards = [board.MoveCopy(action) for action in actions]
-        nextVals = [self.HashHeuristic(b, color) for b in nextBoards]
+        nextVals = [self.HashHeuristic(b, self.color) for b in nextBoards]
         boardSortInds = RandomArgSort(nextVals, reverse=True)
         return actions[boardSortInds[0]]
+      
+#%%
+class MCTS(HeuristicPlayer):
+    
+    def __init__(self, N, maxSimulationDepth=100, C=2,
+                 heuristic=Heuristics.RawNumericEvaluation,
+                 policy=Heuristics.RawNumericPolicyEvaluation,
+                 policyTemp=1, color=False):
+        super().__init__(heuristic, color)
+        self.N = N
+        self.C = C #exploration constant
+        self.maxSimulationDepth = maxSimulationDepth
+        self.policy = policy
+        self.temp = policyTemp
         
-
+    
+    def Policy(self, board, actions):
+        if 'temp' in self.policy.__code__.co_varnames:
+            return self.policy(board, actions, color=self.color, temp=self.temp)
+        else:
+            return self.policy(board, actions, color=self.color)
+    
+    def SimulatePlay(self, board):
+        i = 0
+        terminalStateReached = False
+        while not terminalStateReached:
+            actions = [move.uci() for move in board.legal_moves]
+            p = self.Policy(board, actions)
+            action = np.random.choice(actions, p=p)
+            board.PushUci(action)
+            
+            if board.GetTerminalCondition() or i >= self.maxSimulationDepth:
+                terminalStateReached = True
+        return self.heuristic(board, self.color)
 #%%
 class ABPruner(HeuristicPlayer):
     
@@ -74,7 +106,6 @@ class ABPruner(HeuristicPlayer):
         super().__init__(heuristic, color)
         self.alphaCeiling = alphaCeiling
         self.maxDepth = maxDepth
-        self.human = False
         self.verbose = verbose
         self.terminalStatesSearched = 0
     
@@ -204,7 +235,3 @@ class FastPruner(ABPruner):
                 return v, minAction
             b = min(b, v)
         return v, minAction
-    
-#%%
-class MCTS(HeuristicPlayer):
-    

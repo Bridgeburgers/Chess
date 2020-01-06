@@ -10,3 +10,7 @@ def RandomArgSort(a, reverse=True):
         return args[::-1]
     else:
         return args
+    
+def Softmax(v, temp=1):
+    expv = np.exp(v * temp)
+    return expv / np.sum(expv)

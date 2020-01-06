@@ -1,5 +1,9 @@
 import chess
 import numpy as np
+import sys
+
+sys.path.append('D:/Documents/PythonCode/Chess')
+from MiscFunctions import Softmax
 #%%
 
 rawUnitScores = dict(
@@ -47,3 +51,12 @@ def RawNumericEvaluation(board, color='W', scoreCeiling=1e6,
         score = -score
         
     return(score)
+
+def RawNumericPolicyEvaluation(board, actions, color='W', temp=1,
+                               scoreCeiling=1e6, rawUnitScores=rawUnitScores):
+    boards = [board.MoveCopy(a) for a in actions]
+    scores = [RawNumericEvaluation(b, color, scoreCeiling, rawUnitScores)
+              for b in boards]
+    probs = Softmax(scores, temp=temp)
+    return probs
+    
