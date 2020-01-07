@@ -5,7 +5,7 @@ import numpy as np
 
 sys.path.append('D:/Documents/PythonCode/Chess')
 import Heuristics
-from MiscFunctions import RandomArgSort
+from MiscFunctions import RandomArgSort, Softmax, ProbDict
 #%%
 
 class Player:
@@ -66,25 +66,101 @@ class HeuristicPlayer(Player):
         return actions[boardSortInds[0]]
       
 #%%
-class MCTS(HeuristicPlayer):
+class MCTSNode:
+    """
+    board: the board state of this node
+    nodes: dictionary of action-nodes 
+        (contains all actions, including those with unexplored empty nodes)
+    leaf: has no children (set to false when node is expanded)
+    terminal: is end of a game
+    root: has no parent
+    Q: average utility (either from NN evaluation or SimulatePlay iterations)
+    N: number of visits from MCTS iterations
+    P: prior probability of forward node selections
+    rawP: non-normalized prior probs; used to update P when new child nodes are created
+    p: prior probability of node selection 
+        (the element of parent's P that corresponds to itself)
+    parent: reference to its parent node (None if root)
+    """
+    def __init__(self, C=2, temp=1):
+        self.nodes = {}
+        self.C = C
+        self.temp = temp
+        self.N = 0
+        self.P = {}
+        self.rawP = {}
+        self.p = 1
+        self.Q = 0
+        self.leaf = True
+        self.terminal = False
+        self.parent = None
+        self.root = False
+        
+    def PopulateNode(self, board, rawPolicyDict=None):
+        """
+        initializes a with all empty (unpopulated) nodes that are not yet "searched"
+        This is run separately from __init__ so that when empty nodes are created
+        on this node, they don't all recursively fill their own nodes ad infinitum
+        """
+        self.board = board
+        actions = board.Actions()
+        self.nodes = {action : MCTSNode(C=self.C, temp=self.temp) for action in actions}
+        if rawPolicyDict is not None:
+            self.rawP = rawPolicyDict
+            self.P = ProbDict(rawPolicyDict)
+            for a in actions:
+                if self.nodes.get(a) is not None:
+                    self.nodes[a].p = P[a]
+            
+        
     
+    def CombineProbs(self, rawPolicyDict):
+        """
+        using dictionary of raw non-normalized policy values for new nodes and
+        our own non-normalized policy values, update the normalized policy
+        dictionary
+        """
+        self.rawP.update(rawPolicyDict)
+        probDict = ProbDict(self.rawP)
+        self.P = probDict
+        for a in probDict.keys():
+            if self.nodes.get(a) is not None:
+                self.nodes[a].p = self.P[a]
+    
+    def UCB(self):
+        if self.root:
+            return 0
+        
+        ucb = self.Q + self.C * np.sqrt(np.log(self.parent.N) / self.N)
+        return ucb
+        
+    def UCBZero(self):
+        if self.root:
+            return 0
+        
+        ucb = self.Q + self.C * self.p * np.sqrt(self.parent.N) / (1 + self.N)
+        return ucb
+    
+class MCTS(HeuristicPlayer):
+    """
+    keep in mind that the output of policy is raw values, you must use
+    Policy() to get the probability values
+    """
     def __init__(self, N, maxSimulationDepth=100, C=2,
                  heuristic=Heuristics.RawNumericEvaluation,
-                 policy=Heuristics.RawNumericPolicyEvaluation,
+                 policy = Heuristics.RawNumericPolicyEvaluation,
                  policyTemp=1, color=False):
         super().__init__(heuristic, color)
-        self.N = N
+        self.N = N #number of MCTS simulations per turn
         self.C = C #exploration constant
         self.maxSimulationDepth = maxSimulationDepth
         self.policy = policy
         self.temp = policyTemp
-        
     
     def Policy(self, board, actions):
-        if 'temp' in self.policy.__code__.co_varnames:
-            return self.policy(board, actions, color=self.color, temp=self.temp)
-        else:
-            return self.policy(board, actions, color=self.color)
+        rawPolicyVals = self.policy(board, actions, color=self.color)
+        probDict = ProbDict(rawPolicyVals)
+        return probDict
     
     def SimulatePlay(self, board):
         i = 0
@@ -92,12 +168,20 @@ class MCTS(HeuristicPlayer):
         while not terminalStateReached:
             actions = [move.uci() for move in board.legal_moves]
             p = self.Policy(board, actions)
-            action = np.random.choice(actions, p=p)
+            action = np.random.choice(actions, p=list(p.values()))
             board.PushUci(action)
             
             if board.GetTerminalCondition() or i >= self.maxSimulationDepth:
                 terminalStateReached = True
         return self.heuristic(board, self.color)
+    
+    def VisitNode(self, board, node=None):
+        """
+        if input node is None, this is the root iteration of this call
+        """
+        if node is None:
+            node = MCTSNode(C=self.C, temp=self.temp)
+        
 #%%
 class ABPruner(HeuristicPlayer):
     

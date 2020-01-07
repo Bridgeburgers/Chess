@@ -13,7 +13,7 @@ class AIBoard(Board):
         a = a[a!=' ']
         a = np.reshape(a, [8,8])
         return a
-    
+
     def GetTerminalCondition(self):
         if self.is_checkmate():
             result = self.turn
@@ -44,9 +44,15 @@ class AIBoard(Board):
             return scoreCeiling
         else:
             return -scoreCeiling
+     
+    def Actions(self):
+        return [move.uci() for move in list(board.legal_moves)]
+    
+    def Move(self, action):
+        self.PushUci(action)
         
-    def MoveCopy(self, move):
+    def MoveCopy(self, action):
         returnBoard = self.copy()
-        returnBoard.PushUci(move)
+        returnBoard.Move(action)
         return returnBoard
     

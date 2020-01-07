@@ -3,15 +3,15 @@ import numpy as np
 import sys
 
 sys.path.append('D:/Documents/PythonCode/Chess')
-from MiscFunctions import Softmax
+from MiscFunctions import Softmax, ProbDict
 #%%
-
+sMax = 4000
 rawUnitScores = dict(
-    P=100,
-    N=320,
-    B=330,
-    R=500,
-    Q=900,
+    P=100/sMax,
+    N=320/sMax,
+    B=330/sMax,
+    R=500/sMax,
+    Q=900/sMax,
     K=0
     )
 keys = list(rawUnitScores.keys())
@@ -24,7 +24,7 @@ rawUnitScores[' '] = 0
 
 #%%
 
-def BasicNumericEvaluation(board, color='W', scoreCeiling=1e6,
+def BasicNumericEvaluation(board, color='W', scoreCeiling=1,
                            rawUnitScores=rawUnitScores):
     
     if board.GetTerminalCondition():
@@ -40,7 +40,7 @@ def BasicNumericEvaluation(board, color='W', scoreCeiling=1e6,
         
     return score
 
-def RawNumericEvaluation(board, color='W', scoreCeiling=1e6,
+def RawNumericEvaluation(board, color='W', scoreCeiling=1,
                          rawUnitScores=rawUnitScores):
     
     if board.GetTerminalCondition():
@@ -52,11 +52,22 @@ def RawNumericEvaluation(board, color='W', scoreCeiling=1e6,
         
     return(score)
 
-def RawNumericPolicyEvaluation(board, actions, color='W', temp=1,
-                               scoreCeiling=1e6, rawUnitScores=rawUnitScores):
+def RawNumericPolicyEvaluation(board, actions, color='W',
+                               scoreCeiling=1, rawUnitScores=rawUnitScores):
+    """
+    non-normalized numeric policy evaluation
+    """
     boards = [board.MoveCopy(a) for a in actions]
     scores = [RawNumericEvaluation(b, color, scoreCeiling, rawUnitScores)
               for b in boards]
-    probs = Softmax(scores, temp=temp)
-    return probs
+    scoreDict = {a:s for a,s in zip(actions, scores)}
+    return scoreDict
+
+def NumericPolicyEvaluation(board, actions, color='W', temp=1,
+                               scoreCeiling=1, rawUnitScores=rawUnitScores):
+    scoreDict = RawNumericPolicyEvaluation(board, actions=actions, color=color,
+                                           scoreCeiling=scoreCeiling,
+                                           rawUnitScores=rawUnitScores)
+    probDict = ProbDict(scoreDict)
+    return probDict
     
