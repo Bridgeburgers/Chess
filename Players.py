@@ -81,6 +81,8 @@ class MCTSNode:
     p: prior probability of node selection 
         (the element of parent's P that corresponds to itself)
     parent: reference to its parent node (None if root)
+    parentAction: the action used by the parent to retrieve this node
+    populated: has this node been populated? (If not, it's an unvisited empty node)
     """
     def __init__(self, C=2, temp=1):
         self.nodes = {}
@@ -91,18 +93,27 @@ class MCTSNode:
         self.rawP = {}
         self.p = 1
         self.Q = 0
-        self.leaf = True
         self.terminal = False
         self.parent = None
+        self.parentAction = None
         self.root = False
+        self.populated = False
         
-    def PopulateNode(self, board, rawPolicyDict=None):
+    def PopulateNode(self, board, parent=None, rawPolicyDict=None, parentAction=None):
         """
         initializes a with all empty (unpopulated) nodes that are not yet "searched"
+        the rawPolicyDict fed here must be evaluated on THIS node's board
         This is run separately from __init__ so that when empty nodes are created
         on this node, they don't all recursively fill their own nodes ad infinitum
         """
+        self.populated = True
         self.board = board
+        self.parent = parent
+        self.parentAction = parentAction
+        if self.parent is None:
+            self.root = True
+        if board.GetTerminalCondition():
+            self.terminal = True
         actions = board.Actions()
         self.nodes = {action : MCTSNode(C=self.C, temp=self.temp) for action in actions}
         if rawPolicyDict is not None:
@@ -110,10 +121,8 @@ class MCTSNode:
             self.P = ProbDict(rawPolicyDict)
             for a in actions:
                 if self.nodes.get(a) is not None:
-                    self.nodes[a].p = P[a]
+                    self.nodes[a].p = self.P[a]
             
-        
-    
     def CombineProbs(self, rawPolicyDict):
         """
         using dictionary of raw non-normalized policy values for new nodes and
@@ -141,6 +150,27 @@ class MCTSNode:
         ucb = self.Q + self.C * self.p * np.sqrt(self.parent.N) / (1 + self.N)
         return ucb
     
+    def UCBChildren(self):
+        """
+        get the UCB of all the node's children (even if unvisited)
+        """
+        ucb = {}
+        for action in self.board.Actions():
+            node = self.nodes[action]
+            ucbVal = node.Q
+            if node.N >= 0:
+                ucbVal += node.C * np.sqrt(np.log(self.N) / node.N)
+            ucb[action] = ucbVal
+        return ucb
+        
+    def UCBZeroChildren(self):
+        ucb = {}
+        for action in self.board.Actions():
+            node = self.nodes[action]
+            ucbVal = node.Q + node.C * self.P.get(action) * np.sqrt(self.N) / (1 + node.N)
+            ucb[action] = ucbVal
+        return ucb
+        
 class MCTS(HeuristicPlayer):
     """
     keep in mind that the output of policy is raw values, you must use
@@ -164,7 +194,7 @@ class MCTS(HeuristicPlayer):
     
     def SimulatePlay(self, board):
         i = 0
-        terminalStateReached = False
+        terminalStateReached = board.GetTerminalCondition() != False
         while not terminalStateReached:
             actions = [move.uci() for move in board.legal_moves]
             p = self.Policy(board, actions)
@@ -175,12 +205,53 @@ class MCTS(HeuristicPlayer):
                 terminalStateReached = True
         return self.heuristic(board, self.color)
     
-    def VisitNode(self, board, node=None):
+    def VisitNode(self, node, action=None, parentNode=None, ucbType='normal'):
         """
-        if input node is None, this is the root iteration of this call
+        visit the given node, or create the root node if 'node' is None
+        add 1 visit count to this node, and populate it if it's 'new'
         """
-        if node is None:
-            node = MCTSNode(C=self.C, temp=self.temp)
+        node.N += 1
+            
+        if not node.populated:
+            newNodeBoard = parentNode.board.MoveCopy(action)
+            rawPolicyDict = self.policy(
+                newNodeBoard, newNodeBoard.Actions(), color=self.color)
+            node.PopulateNode(newNodeBoard, parent=parentNode, 
+                              rawPolicyDict=rawPolicyDict, parentAction=action)
+            return self.GetNodeValue(node)
+            
+        if node.board.GetTerminalCondition():
+            return self.GetNodeValue(node)
+        
+        #find the node with the highest UCB (random tie break) and call it with VisitNode
+        if ucbType.lower() == 'zero':
+            nodeUcb = node.UCBZeroChildren()
+        else:
+            nodeUcb = node.UCBChildren()
+            
+        bestActionInd = RandomArgSort(list(nodeUcb.values()), reverse=True)[0]
+        bestAction = list(nodeUcb.keys())[bestActionInd]
+        
+        nodeToVisit = node.nodes.get(bestAction)
+        nodeVal = self.VisitNode(nodeToVisit, action=bestAction,parentNode=node, ucbType=ucbType)
+            
+        if not node.root:
+            return nodeVal
+        
+    def Search(self, board):
+        rootNode = MCTSNode(C=self.C, temp=self.temp)
+        rootNode.PopulateNode(board, parent=None, rawPolicyDict=None, parentAction=None)
+        for _ in self.N:
+            self.VisitNode(rootNode, action=None, parentNode=None, ucbType='normal')
+        return rootNode
+            
+    def GetNodeValue(self, node):
+        """
+        get the value of the given node by simulating play;
+        for the zero version of this class, this will be overwritten by a nnet call
+        """
+        board = node.board.copy()
+        return self.SimulatePlay(board)
         
 #%%
 class ABPruner(HeuristicPlayer):
