@@ -45,8 +45,13 @@ class AIBoard(Board):
         else:
             return -scoreCeiling
      
+    def Turn(self):
+        if self.turn:
+            return 'W'
+        return 'B'
+        
     def Actions(self):
-        return [move.uci() for move in list(board.legal_moves)]
+        return [move.uci() for move in list(self.legal_moves)]
     
     def Move(self, action):
         self.PushUci(action)
