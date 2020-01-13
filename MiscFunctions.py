@@ -19,3 +19,7 @@ def ProbDict(rawPolicyDict, temp=1):
     probs = Softmax(list(rawPolicyDict.values()), temp=temp)
     probDict = {a:p for a,p in zip(rawPolicyDict.keys(), probs)}
     return probDict
+
+def OpposingColor(color):
+    if color=='W': return 'B'
+    if color=='B': return 'W'

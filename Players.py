@@ -5,7 +5,7 @@ import numpy as np
 
 sys.path.append('D:/Documents/PythonCode/Chess')
 import Heuristics
-from MiscFunctions import RandomArgSort, Softmax, ProbDict
+from MiscFunctions import RandomArgSort, Softmax, ProbDict, OpposingColor
 #%%
 
 class Player:
@@ -158,8 +158,8 @@ class MCTSNode:
         for action in self.board.Actions():
             node = self.nodes[action]
             ucbVal = node.Q
-            if node.N > 0:
-                ucbVal += node.C * np.sqrt(np.log(self.N) / node.N)
+            #if node.N > 0:
+            ucbVal += node.C * np.sqrt(np.log(self.N) / (1+node.N))
             ucb[action] = ucbVal
         return ucb
         
@@ -176,7 +176,7 @@ class MCTS(HeuristicPlayer):
     keep in mind that the output of policy is raw values, you must use
     Policy() to get the probability values
     """
-    def __init__(self, N=1500, maxSimulationDepth=30, C=2,
+    def __init__(self, N=1500, maxSimulationDepth=200, C=2,
                  heuristic=Heuristics.RawNumericEvaluation,
                  policy = Heuristics.RawNumericPolicyEvaluation,
                  policyTemp=1, stochasticPlay=True, color=False):
@@ -193,7 +193,7 @@ class MCTS(HeuristicPlayer):
         probDict = ProbDict(rawPolicyVals)
         return probDict
     
-    def SimulatePlay(self, board):
+    def SimulatePlay(self, board, color='W'):
         i = 0
         terminalStateReached = board.GetTerminalCondition() != False
         while not terminalStateReached:
@@ -201,12 +201,13 @@ class MCTS(HeuristicPlayer):
             p = self.Policy(board, actions)
             action = np.random.choice(actions, p=list(p.values()))
             board.PushUci(action)
+            i += 1
             
             if board.GetTerminalCondition() or i >= self.maxSimulationDepth:
                 terminalStateReached = True
-        return self.heuristic(board, self.color)
+        return self.heuristic(board, color)
     
-    def VisitNode(self, node, action=None, parentNode=None, ucbType='normal'):
+    def VisitNode(self, node, action=None, parentNode=None, color='W', ucbType='normal'):
         """
         visit the given node, or create the root node if 'node' is None
         add 1 visit count to this node, and populate it if it's 'new'
@@ -216,13 +217,13 @@ class MCTS(HeuristicPlayer):
         if not node.populated:
             newNodeBoard = parentNode.board.MoveCopy(action)
             rawPolicyDict = self.policy(
-                newNodeBoard, newNodeBoard.Actions(), color=newNodeBoard.Turn()))
+                newNodeBoard, newNodeBoard.Actions(), color=newNodeBoard.Turn())
             node.PopulateNode(newNodeBoard, parent=parentNode, 
                               rawPolicyDict=rawPolicyDict, parentAction=action)
-            return -self.GetNodeValue(node)
+            return self.GetNodeValue(node, color=color)
             
         if node.board.GetTerminalCondition():
-            return -self.GetNodeValue(node)
+            return self.GetNodeValue(node, color=color)
         
         #find the node with the highest UCB (random tie break) and call it with VisitNode
         if ucbType.lower() == 'zero':
@@ -234,18 +235,19 @@ class MCTS(HeuristicPlayer):
         bestAction = list(nodeUcb.keys())[bestActionInd]
         
         nodeToVisit = node.nodes.get(bestAction)
-        nodeVal = self.VisitNode(nodeToVisit, action=bestAction,parentNode=node, ucbType=ucbType)
+        nodeVal = self.VisitNode(nodeToVisit, action=bestAction,parentNode=node, 
+                                 color=OpposingColor(color), ucbType=ucbType)
         
         node.Q = (node.N * node.Q + nodeVal) / (node.N + 1)
             
         if not node.root:
-            return -nodeVal
+            return nodeVal
         
     def Search(self, board, stochastic=True):
         rootNode = MCTSNode(C=self.C, temp=self.temp)
         rootNode.PopulateNode(board, parent=None, rawPolicyDict=None, parentAction=None)
         for _ in range(self.N):
-            self.VisitNode(rootNode, action=None, parentNode=None, ucbType='normal')
+            self.VisitNode(rootNode, action=None, parentNode=None, color=self.Color(), ucbType='normal')
         #take the action with probability based on node visits
         actions = list(rootNode.nodes.keys())
         visits = [rootNode.nodes[a].N for a in actions]
@@ -262,13 +264,13 @@ class MCTS(HeuristicPlayer):
             pass
         return self.Search(board, stochastic=self.stochasticPlay)
             
-    def GetNodeValue(self, node):
+    def GetNodeValue(self, node, color='W'):
         """
         get the value of the given node by simulating play;
         for the zero version of this class, this will be overwritten by a nnet call
         """
         board = node.board.copy()
-        return self.SimulatePlay(board)
+        return self.SimulatePlay(board, color)
         
 #%%
 class ABPruner(HeuristicPlayer):
