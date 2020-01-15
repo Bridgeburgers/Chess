@@ -195,7 +195,7 @@ class MCTS(HeuristicPlayer):
     
     def SimulatePlay(self, board, color='W'):
         i = 0
-        terminalStateReached = board.GetTerminalCondition() != False
+        terminalStateReached = board.GetTerminalCondition() != False or i >= self.maxSimulationDepth
         while not terminalStateReached:
             actions = [move.uci() for move in board.legal_moves]
             p = self.Policy(board, actions)
