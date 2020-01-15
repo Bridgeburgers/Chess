@@ -12,7 +12,7 @@ def RandomArgSort(a, reverse=True):
         return args
     
 def Softmax(v, temp=1):
-    expv = np.exp(v * temp)
+    expv = np.exp(np.array(v) * temp)
     return expv / np.sum(expv)
 
 def ProbDict(rawPolicyDict, temp=1):
