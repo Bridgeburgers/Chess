@@ -2,6 +2,7 @@ import chess
 import random
 import sys
 import numpy as np
+from scipy.stats import entropy
 
 sys.path.append('D:/Documents/PythonCode/Chess')
 import Heuristics
@@ -179,7 +180,7 @@ class MCTS(HeuristicPlayer):
     def __init__(self, N=300, maxSimulationDepth=20, C=2,
                  heuristic=Heuristics.RawNumericEvaluation,
                  policy = Heuristics.RawNumericPolicyEvaluation,
-                 policyTemp=1, stochasticPlay=True, color=False):
+                 policyTemp=1, stochasticPlay=True, entropyIteration=False, color=False):
         super().__init__(heuristic, color)
         self.N = N #number of MCTS simulations per turn
         self.C = C #exploration constant
@@ -187,6 +188,7 @@ class MCTS(HeuristicPlayer):
         self.policy = policy
         self.temp = policyTemp
         self.stochasticPlay = stochasticPlay
+        self.entropyIteration = entropyIteration
     
     def Policy(self, board, actions):
         rawPolicyVals = self.policy(board, actions, color=board.Turn())
@@ -237,7 +239,7 @@ class MCTS(HeuristicPlayer):
         nodeVal = self.VisitNode(nodeToVisit, action=bestAction,parentNode=node, 
                                  color=OpposingColor(color), ucbType=ucbType)
         
-        node.Q = (node.N * node.Q + nodeVal) / (node.N + 1)
+        node.Q = (node.N * node.Q - nodeVal) / (node.N + 1)
             
         if not node.root:
             return -nodeVal
@@ -246,7 +248,14 @@ class MCTS(HeuristicPlayer):
         rootNode = MCTSNode(C=self.C, temp=self.temp)
         rawPolicyDict = self.policy(board, board.Actions(), color=board.Turn())
         rootNode.PopulateNode(board, parent=None, rawPolicyDict=rawPolicyDict, parentAction=None)
-        for _ in range(self.N):
+        if self.entropyIteration:
+            #probs = list(rootNode.P.values())
+            #effectiveMoveNum = np.exp(entropy(probs))
+            effectiveMoveNum = len(rootNode.nodes)
+            nIterations = int(round(self.N * effectiveMoveNum))
+        else:
+            nIterations = self.N
+        for _ in range(nIterations):
             self.VisitNode(rootNode, action=None, parentNode=None, color=self.Color(), ucbType='zero')
         #take the action with probability based on node visits
         actions = list(rootNode.nodes.keys())

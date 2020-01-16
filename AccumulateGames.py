@@ -5,9 +5,9 @@ from PlayGame import PlayGame
 from Players import Player, ABPruner, FastPruner, MCTS
 
 #%%
-PlayGame(ABPruner(3), MCTS(N=300, maxSimulationDepth=5, policyTemp=40, C=0.1, stochasticPlay=False))
+PlayGame(ABPruner(3), MCTS(N=1200, maxSimulationDepth=2, policyTemp=40, C=0.5, stochasticPlay=False))
 
-PlayGame(ABPruner(3), MCTS(N=1000, maxSimulationDepth=3, policyTemp=40, C=0.05, stochasticPlay=False))
+PlayGame(ABPruner(3), MCTS(N=60, maxSimulationDepth=2, policyTemp=40, C=0.5, stochasticPlay=False, entropyIteration=True))
 #%%
 gameResults = []
 for _ in range(20):
