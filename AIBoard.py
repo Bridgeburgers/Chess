@@ -6,6 +6,11 @@ class AIBoard(Board):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.strState = str(self)
+        
+    def Copy(self):
+        copyBoard = self.copy()
+        copyBoard.strState = self.strState
+        return copyBoard
     
     def BoardArray(self):
         a = np.array(list(self.strState))

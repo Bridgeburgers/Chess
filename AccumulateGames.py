@@ -5,9 +5,10 @@ from PlayGame import PlayGame
 from Players import Player, ABPruner, FastPruner, MCTS
 
 #%%
-PlayGame(ABPruner(3), MCTS(N=1200, maxSimulationDepth=2, policyTemp=40, C=0.5, stochasticPlay=False))
+PlayGame(ABPruner(4), MCTS(N=400, maxSimulationDepth=0, policyTemp=40,
+                           C=0.03, stochasticPlay=False, ucbType='normal', entropyIteration=True))
 
-PlayGame(ABPruner(3), MCTS(N=60, maxSimulationDepth=2, policyTemp=40, C=0.5, stochasticPlay=False, entropyIteration=True))
+PlayGame(ABPruner(3), MCTS(N=200, maxSimulationDepth=2, policyTemp=40, C=0.5, stochasticPlay=False, entropyIteration=True))
 #%%
 gameResults = []
 for _ in range(20):

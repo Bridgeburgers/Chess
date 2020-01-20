@@ -179,7 +179,7 @@ class MCTS(HeuristicPlayer):
     """
     def __init__(self, N=300, maxSimulationDepth=20, C=2,
                  heuristic=Heuristics.RawNumericEvaluation,
-                 policy = Heuristics.RawNumericPolicyEvaluation,
+                 policy = Heuristics.RawNumericPolicyEvaluation, ucbType='normal',
                  policyTemp=1, stochasticPlay=True, entropyIteration=False, color=False):
         super().__init__(heuristic, color)
         self.N = N #number of MCTS simulations per turn
@@ -189,6 +189,7 @@ class MCTS(HeuristicPlayer):
         self.temp = policyTemp
         self.stochasticPlay = stochasticPlay
         self.entropyIteration = entropyIteration
+        self.ucbType = ucbType
     
     def Policy(self, board, actions):
         rawPolicyVals = self.policy(board, actions, color=board.Turn())
@@ -217,8 +218,12 @@ class MCTS(HeuristicPlayer):
             
         if not node.populated:
             newNodeBoard = parentNode.board.MoveCopy(action)
-            rawPolicyDict = self.policy(
-                newNodeBoard, newNodeBoard.Actions(), color=newNodeBoard.Turn())
+            
+            if ucbType.lower() == 'zero':
+                rawPolicyDict = self.policy(
+                    newNodeBoard, newNodeBoard.Actions(), color=newNodeBoard.Turn())
+            else:
+                rawPolicyDict = None
             node.PopulateNode(newNodeBoard, parent=parentNode, 
                               rawPolicyDict=rawPolicyDict, parentAction=action)
             return -self.GetNodeValue(node, color=color)
@@ -256,7 +261,8 @@ class MCTS(HeuristicPlayer):
         else:
             nIterations = self.N
         for _ in range(nIterations):
-            self.VisitNode(rootNode, action=None, parentNode=None, color=self.Color(), ucbType='zero')
+            self.VisitNode(rootNode, action=None, parentNode=None, color=self.Color(), 
+                           ucbType=self.ucbType)
         #take the action with probability based on node visits
         actions = list(rootNode.nodes.keys())
         visits = [rootNode.nodes[a].N for a in actions]
@@ -278,7 +284,7 @@ class MCTS(HeuristicPlayer):
         get the value of the given node by simulating play;
         for the zero version of this class, this will be overwritten by a nnet call
         """
-        board = node.board.copy()
+        board = node.board.Copy()
         return self.SimulatePlay(board, color)
         
 #%%
