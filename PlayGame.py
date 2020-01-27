@@ -19,7 +19,7 @@ def IsLegal(move, board):
     return chess.Move.from_uci(move) in board.legal_moves
 #%%
 
-def PlayGame(player1, player2, pause=0.2, visual = 'svg'):
+def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None):
     """
     visual: "simple" | "svg" | None
     """
@@ -28,7 +28,8 @@ def PlayGame(player1, player2, pause=0.2, visual = 'svg'):
     player1.color = True
     player2.color = False
     
-    board = AIBoard()
+    if board is None:
+        board = AIBoard()
     try:
         while not board.is_game_over(claim_draw=True):
             if board.turn == chess.WHITE:
