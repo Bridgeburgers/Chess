@@ -6,6 +6,7 @@ class AIBoard(Board):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.strState = str(self)
+        self.history = []
         
     def Copy(self):
         copyBoard = self.copy()
@@ -58,11 +59,20 @@ class AIBoard(Board):
     def Actions(self):
         return [move.uci() for move in list(self.legal_moves)]
     
-    def Move(self, action):
+    def Move(self, action, storePrevious=False):
+        if storePrevious:
+            self.history.append(self.Copy())
         self.PushUci(action)
         
     def MoveCopy(self, action):
         returnBoard = self.copy()
         returnBoard.Move(action)
         return returnBoard
+    
+    def UndoMove(self, inplace=True):
+        if len(self.history) > 0:
+            history = self.history
+            self.__dict__.update(history[len(history)-1].__dict__)
+            del history[len(history)-1]
+            self.history = history
     

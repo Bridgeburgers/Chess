@@ -42,7 +42,7 @@ def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None):
                 
                 if IsLegal(uci, board):
                 
-                    board.PushUci(uci)
+                    board.Move(uci, storePrevious=True)
                     board_stop = DisplayBoard(board, use_svg)
         
                     if visual is not None:

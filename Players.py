@@ -224,12 +224,18 @@ class MCTS(HeuristicPlayer):
                     newNodeBoard, newNodeBoard.Actions(), color=newNodeBoard.Turn())
             else:
                 rawPolicyDict = None
-            node.PopulateNode(newNodeBoard, parent=parentNode, 
+                
+            node.PopulateNode(newNodeBoard, parent=parentNode,
                               rawPolicyDict=rawPolicyDict, parentAction=action)
-            return -self.GetNodeValue(node, color=color)
+            nodeVal = self.GetNodeValue(node, color=color)
+            
+            return -nodeVal
             
         if node.board.GetTerminalCondition():
-            return -self.GetNodeValue(node, color=color)
+            nodeVal = self.GetNodeValue(node, color=color)
+            #node.Q = (node.N * node.Q + nodeVal) / (node.N + 1)
+            node.Q = -nodeVal
+            return -nodeVal
         
         #find the node with the highest UCB (random tie break) and call it with VisitNode
         if ucbType.lower() == 'zero':
