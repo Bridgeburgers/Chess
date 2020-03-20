@@ -1,6 +1,7 @@
 import chess
 import sys
 import time
+import timeit
 from IPython.display import display, HTML, clear_output
 
 sys.path.append('D:/Documents/PythonCode/Chess')
@@ -19,7 +20,7 @@ def IsLegal(move, board):
     return chess.Move.from_uci(move) in board.legal_moves
 #%%
 
-def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None):
+def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None, displayDuration=False):
     """
     visual: "simple" | "svg" | None
     """
@@ -34,14 +35,19 @@ def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None):
         while not board.is_game_over(claim_draw=True):
             if board.turn == chess.WHITE:
                 currentPlayer = player1
+                currentColor = 'W'
             else:
                 currentPlayer = player2
+                currentColor = 'B'
 
             while True:
+                if displayDuration: startTime = timeit.default_timer()
                 uci = currentPlayer.Play(board)
+                if displayDuration:
+                    elapsed = timeit.default_timer() - startTime
+                    print(currentColor + ': ' + str(elapsed) + ' seconds')
                 
                 if IsLegal(uci, board):
-                
                     board.Move(uci, storePrevious=True)
                     board_stop = DisplayBoard(board, use_svg)
         

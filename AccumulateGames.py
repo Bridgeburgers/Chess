@@ -1,6 +1,6 @@
 import sys
 import pandas as pd
-sys.path.append('D:/Documents/PythonCode/Chess/')
+#sys.path.append('D:/Documents/PythonCode/Chess/')
 from PlayGame import PlayGame
 from Players import Player, ABPruner, FastPruner, MCTS
 from AIBoard import AIBoard
@@ -8,8 +8,9 @@ import numpy as np
 
 #%%
 board = AIBoard()
-PlayGame(ABPruner(3), MCTS(N=8000, maxSimulationDepth=0, policyTemp=40,
-                           C=.3, stochasticPlay=False, ucbType='normal', entropyIteration=False), board=board)
+PlayGame(ABPruner(2,verbose=True), MCTS(N=7000, maxSimulationDepth=0, policyTemp=40,
+                           C=.4, stochasticPlay=False, ucbType='normal', entropyIteration=False), 
+         board=board, displayDuration=True)
 #%%
 PlayGame(ABPruner(2), ABPruner(3), board=board)
 #%%
