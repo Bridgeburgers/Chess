@@ -71,3 +71,12 @@ def NumericPolicyEvaluation(board, actions, color='W', temp=1,
     probDict = ProbDict(scoreDict)
     return probDict
     
+#%%
+def ValueNetworkEvaluation(board, model, color='W'):
+    if board.GetTerminalCondition():
+        return board.TerminalConditionScore(color, 1)
+    
+    x = board.BoardCNNState()
+    x = np.reshape(x, [1, x.shape[0], x.shape[1], x.shape[2]])
+    val = model(x).numpy()[0,0]
+    return val

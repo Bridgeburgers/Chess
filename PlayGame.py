@@ -2,6 +2,7 @@ import chess
 import sys
 import time
 import timeit
+import numpy as np
 from IPython.display import display, HTML, clear_output
 
 sys.path.append('D:/Documents/PythonCode/Chess')
@@ -20,10 +21,11 @@ def IsLegal(move, board):
     return chess.Move.from_uci(move) in board.legal_moves
 #%%
 
-def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None, displayDuration=False):
+def PlayGame(player1, player2, pause=0.2, visual = 'svg', 
+             board=None, displayDuration=False, saveStates=False):
     """
     visual: "simple" | "svg" | None
-    """
+    """    
     use_svg = (visual == "svg")
     
     player1.color = True
@@ -31,6 +33,9 @@ def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None, displayDur
     
     if board is None:
         board = AIBoard()
+        
+    states = []
+    
     try:
         while not board.is_game_over(claim_draw=True):
             if board.turn == chess.WHITE:
@@ -50,6 +55,9 @@ def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None, displayDur
                 if IsLegal(uci, board):
                     board.Move(uci, storePrevious=True)
                     board_stop = DisplayBoard(board, use_svg)
+                    
+                    if saveStates:
+                        states.append(board.BoardCNNState())
         
                     if visual is not None:
                         if visual == "svg":
@@ -59,14 +67,17 @@ def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None, displayDur
                         if visual == "svg" and not currentPlayer.human:
                             time.sleep(pause)
                     break
-                        
+                
     except KeyboardInterrupt:
         msg = "Game interrupted!"
         return (None, msg, board)
-    result = None
+    
+    states = np.array(states)
+    
+    result = 0
     if board.is_checkmate():
         msg = "checkmate: " + currentPlayer.Color() + " wins!"
-        result = not board.turn
+        result = -1 + 2 * (not board.turn)
     elif board.is_stalemate():
         msg = "draw: stalemate"
     elif board.is_fivefold_repetition():
@@ -77,7 +88,8 @@ def PlayGame(player1, player2, pause=0.2, visual = 'svg', board=None, displayDur
         msg = "draw: claim"
     if visual is not None:
         print(msg)
-    return (result, msg, board)
+        
+    return (result, msg, board, states)
 
 
     

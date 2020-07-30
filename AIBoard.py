@@ -75,4 +75,36 @@ class AIBoard(Board):
             self.__dict__.update(history[len(history)-1].__dict__)
             del history[len(history)-1]
             self.history = history
+            
+    def BoardCNNState(self):
+        """
+        get a numpy array of the board in a format for CNN training
+        """
+        x = self.BoardArray()
+        
+        #get arrays for pieces
+        pieces = ['P','R','N','B','Q','K','p','r','n','b','q','k']
+        X = np.stack([(x==s).astype(float) for s in pieces], axis=2)
+        return X
+        
+        zeros = np.zeros([8,8,1], dtype=float)
+        
+        #get castling arrays
+        p1Castle = zeros + self.has_castling_rights(0)
+        p2Castle = zeros + self.has_castling_rights(1)
+        
+        turn = zeros + self.turn
+        
+        repetitions = 1
+        for i in range(2,6):
+            if self.is_repetition(i):
+                repetitions = i
+            else:
+                break
+        repetitions = zeros + repetitions
+        
+        
+        X = np.concatenate((X, p1Castle, p2Castle, turn, repetitions), axis=2)
+        
+        return X
     
